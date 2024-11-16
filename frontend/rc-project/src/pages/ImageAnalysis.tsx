@@ -11,42 +11,68 @@ interface AnalysisResults {
 }
 
 const ImageAnalysis = () => {
-  const [analyzing, setAnalyzing] = useState(false);
-  const [results, setResults] = useState<AnalysisResults | null>(null);
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const analyze = async () => {
-      setAnalyzing(true);
-      try {
-        // Simulate API call to Azure Computer Vision and OpenAI
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        setResults({
-          infected: true,
-          confidence: 0.89,
-          location: { x: 450, y: 300 },
-          recommendation: "Apply organic fungicide treatment in the affected area. Monitor daily for the next week."
-        });
-        
-        toast.success('Analysis completed successfully');
-      } catch (error) {
-        toast.error('Failed to analyze image');
-      } finally {
-        setAnalyzing(false);
+    // State to track whether an analysis is in progress
+    const [analyzing, setAnalyzing] = useState(false);
+    
+    // State to hold the results of the image analysis
+    const [results, setResults] = useState<AnalysisResults | null>(null);
+  
+    const onDrop = useCallback((acceptedFiles: File[]) => {
+        // Asynchronous function to handle the file upload and analysis
+        const analyze = async () => {
+          // Set analyzing state to true when analysis starts
+          setAnalyzing(true);
+          
+          // Create a FormData object to send the image file
+          const formData = new FormData();
+          formData.append("file", acceptedFiles[0]);
+      
+          try {
+            // Send the image to the backend using fetch
+            const response = await fetch("http://localhost:8000/upload/", {
+              method: "POST",
+              body: formData,  // Attach the FormData with the image
+            });
+      
+            if (!response.ok) {
+              throw new Error("Failed to analyze image");
+            }
+      
+            // Parse the response from the backend
+            const data = await response.json();
+      
+            // Mock data can be removed once the backend provides actual analysis results
+            setResults({
+              infected: data.infected,  // Data from backend
+              confidence: data.confidence,  // Data from backend
+              location: data.location,  // Data from backend
+              recommendation: data.recommendation,  // Data from backend
+            });
+      
+            // Show success toast notification
+            toast.success("Analysis completed successfully");
+          } catch (error) {
+            // Show error message if the analysis fails
+            toast.error("Failed to analyze image");
+          } finally {
+            // Reset analyzing state back to false after completion
+            setAnalyzing(false);
+          }
+        };
+      
+        // Check if any files were dropped; if so, start the analysis
+        if (acceptedFiles.length > 0) {
+          analyze();
+        }
+      }, []);
+  
+    // Set up the dropzone for file uploads with specified accepted file types
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+      onDrop,  // Function to call when files are dropped
+      accept: {
+        'image/*': ['.jpeg', '.jpg', '.png']  // Accept only image files with specified extensions
       }
-    };
-
-    if (acceptedFiles.length > 0) {
-      analyze();
-    }
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png']
-    }
-  });
+    });
 
   return (
     <div className="space-y-6">
@@ -111,6 +137,13 @@ const ImageAnalysis = () => {
 };
 
 export default ImageAnalysis;
+
+
+
+
+
+
+
 
 // import React, { useCallback, useState } from 'react';
 // import { useDropzone } from 'react-dropzone';
